@@ -70,23 +70,31 @@ app.post("/download", (req, res) => {
 
         io.emit("torrent-added", { folderName, files: filesInfo });
 
-        torrent.on("download", () => {
+        // ✅ **Track Download Progress**
+        const interval = setInterval(() => {
             const progress = (torrent.progress * 100).toFixed(2);
             console.log(`Download progress: ${progress}%`);
             io.emit("progress", { type: "download", progress, folderName });
-        });
+
+            // ✅ Stop interval if download is complete
+            if (torrent.progress === 1) {
+                clearInterval(interval);
+            }
+        }, 2000); // Every 2 seconds
 
         torrent.on("done", () => {
             console.log("All files downloaded!");
             io.emit("progress", { type: "done", folderName });
+            clearInterval(interval); // Stop interval on completion
         });
 
         torrent.on("error", (err) => {
             console.error("Torrent error:", err.message);
             io.emit("progress", { type: "error", message: err.message });
+            clearInterval(interval);
         });
 
-        res.json({ success: true });
+        res.json({ success: true, folderName, files: filesInfo });
     });
 });
 
