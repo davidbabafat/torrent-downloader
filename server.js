@@ -58,7 +58,7 @@ const TRACKERS = [
 
 app.post("/download", (req, res) => {
     const magnetURI = req.body.magnet;
-    console.log("Received Magnet URI:", magnetURI);  // Debugging line
+    console.log("Received Magnet URI:", magnetURI);
 
     if (!magnetURI) {
         return res.status(400).json({ error: "No magnet link provided" });
@@ -81,7 +81,6 @@ app.post("/download", (req, res) => {
 
         torrent.on("download", () => {
             const progress = (torrent.progress * 100).toFixed(2);
-            console.log(`Download progress: ${progress}%`);  // Debugging line
             io.emit("progress", { type: "download", progress, folderName });
         });
 
@@ -98,6 +97,7 @@ app.post("/download", (req, res) => {
         res.json({ success: true });
     });
 });
+
 
 server.listen(PORT, () => {
     console.log(`Server running at ${frontendUrl}`);

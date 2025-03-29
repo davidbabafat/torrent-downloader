@@ -117,39 +117,49 @@
     </div>
 
     <script>
-        const socket = io("https://torrent-downloader-5th2.onrender.com");
-
         socket.on("torrent-added", (data) => {
-            console.log("Torrent added:", data);  // Debugging line
+            console.log("Torrent added:", data);
             document.getElementById("loader").style.display = "none";
             const container = document.getElementById("filesContainer");
             container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
-
+    
             const progressContainer = document.createElement("div");
             progressContainer.classList.add("progress-container");
-
+    
             const progressBar = document.createElement("div");
             progressBar.classList.add("progress-bar");
             progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
-
+    
             const progressText = document.createElement("div");
             progressText.classList.add("progress-text");
             progressText.id = "progress-text";
             progressText.innerText = "0%";
-
+    
             progressContainer.appendChild(progressBar);
             progressContainer.appendChild(progressText);
             container.appendChild(progressContainer);
-
+    
             const message = document.createElement("div");
             message.classList.add("message");
             message.id = "download-message";
             message.innerText = "Download Completed!";
             container.appendChild(message);
+    
+            // Display the download links for the files
+            const fileList = document.createElement("div");
+            fileList.innerHTML = "<h3>Available Files:</h3>";
+            data.files.forEach(file => {
+                const fileLink = document.createElement("a");
+                fileLink.href = file.downloadLink;
+                fileLink.innerText = file.name;
+                fileLink.target = "_blank";
+                fileList.appendChild(fileLink);
+                fileList.appendChild(document.createElement("br"));
+            });
+            container.appendChild(fileList);
         });
-
+    
         socket.on("progress", (data) => {
-            console.log("Progress update:", data);  // Debugging line
             if (data.type === "download") {
                 document.getElementById("progress-bar").style.width = data.progress + "%";
                 document.getElementById("progress-text").innerText = data.progress + "%";
@@ -157,33 +167,8 @@
                 document.getElementById("download-message").style.display = "block";
             }
         });
-
-        function startDownload() {
-            const magnetLink = document.getElementById("magnetLink").value;
-            console.log("Submitting Magnet Link:", magnetLink);  // Debugging line
-
-            if (!magnetLink) {
-                alert("Please enter a magnet link!");
-                return;
-            }
-
-            document.getElementById("loader").innerHTML = `<div class="loader"></div>`;
-            document.getElementById("loader").style.display = "block";
-
-            fetch("https://torrent-downloader-5th2.onrender.com/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ magnet: magnetLink }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Server Response:", data);  // Debugging line
-            })
-            .catch(error => {
-                console.error("Error:", error);
-            });
-        }
     </script>
+    
 
 </body>
 </html>
