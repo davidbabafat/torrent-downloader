@@ -117,51 +117,56 @@
     </div>
 
     <script>
-socket.on("torrent-added", (data) => {
-    console.log("Torrent added:", data);  // Debugging line
-    document.getElementById("loader").style.display = "none";
-    const container = document.getElementById("filesContainer");
-    container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+        const socket = io("https://torrent-downloader-5th2.onrender.com");
 
-    const progressContainer = document.createElement("div");
-    progressContainer.classList.add("progress-container");
+        // Listen for "torrent-added" event
+        socket.on("torrent-added", (data) => {
+            console.log("Torrent added:", data);  // Debugging line
+            document.getElementById("loader").style.display = "none";
+            const container = document.getElementById("filesContainer");
+            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
 
-    const progressBar = document.createElement("div");
-    progressBar.classList.add("progress-bar");
-    progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
+            const progressContainer = document.createElement("div");
+            progressContainer.classList.add("progress-container");
 
-    const progressText = document.createElement("div");
-    progressText.classList.add("progress-text");
-    progressText.id = "progress-text";
-    progressText.innerText = "0%";
+            const progressBar = document.createElement("div");
+            progressBar.classList.add("progress-bar");
+            progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
 
-    progressContainer.appendChild(progressBar);
-    progressContainer.appendChild(progressText);
-    container.appendChild(progressContainer);
+            const progressText = document.createElement("div");
+            progressText.classList.add("progress-text");
+            progressText.id = "progress-text";
+            progressText.innerText = "0%";
 
-    const message = document.createElement("div");
-    message.classList.add("message");
-    message.id = "download-message";
-    message.innerText = "Download Completed!";
-    container.appendChild(message);
+            progressContainer.appendChild(progressBar);
+            progressContainer.appendChild(progressText);
+            container.appendChild(progressContainer);
 
-    // Create links for each file after the torrent is added
-    const fileLinks = document.createElement("div");
-    fileLinks.classList.add("file-links");
+            const message = document.createElement("div");
+            message.classList.add("message");
+            message.id = "download-message";
+            message.innerText = "Download Completed!";
+            container.appendChild(message);
 
-    data.files.forEach(file => {
-        const fileLink = document.createElement("a");
-        fileLink.href = file.downloadLink;
-        fileLink.textContent = file.name;
-        fileLink.download = file.name;  // Trigger download on click
-        fileLinks.appendChild(fileLink);
-        fileLinks.appendChild(document.createElement("br"));
-    });
+            // Create links for each file after the torrent is added
+            const fileLinks = document.createElement("div");
+            fileLinks.classList.add("file-links");
 
-    container.appendChild(fileLinks);
-});
+            data.files.forEach(file => {
+                const fileLink = document.createElement("a");
+                fileLink.href = file.downloadLink;
+                fileLink.textContent = file.name;
+                fileLink.download = file.name;  // Trigger download on click
+                fileLinks.appendChild(fileLink);
+                fileLinks.appendChild(document.createElement("br"));
+            });
 
+            container.appendChild(fileLinks);
+        });
+
+        // Listen for progress updates
         socket.on("progress", (data) => {
+            console.log("Progress update:", data);  // Debugging line
             if (data.type === "download") {
                 document.getElementById("progress-bar").style.width = data.progress + "%";
                 document.getElementById("progress-text").innerText = data.progress + "%";
@@ -169,8 +174,34 @@ socket.on("torrent-added", (data) => {
                 document.getElementById("download-message").style.display = "block";
             }
         });
+
+        // Function to handle the start of the download
+        function startDownload() {
+            const magnetLink = document.getElementById("magnetLink").value;
+            console.log("Submitting Magnet Link:", magnetLink);  // Debugging line
+
+            if (!magnetLink) {
+                alert("Please enter a magnet link!");
+                return;
+            }
+
+            document.getElementById("loader").innerHTML = `<div class="loader"></div>`;
+            document.getElementById("loader").style.display = "block";
+
+            fetch("https://torrent-downloader-5th2.onrender.com/download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ magnet: magnetLink }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Server Response:", data);  // Debugging line
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
     </script>
-    
 
 </body>
 </html>
