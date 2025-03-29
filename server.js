@@ -16,8 +16,8 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const client = new WebTorrent();
-const PORT = 3000;
-const DOWNLOADS_DIR = path.join(os.homedir(), "Downloads"); // 🔹 Changed to system's Downloads folder
+const PORT = process.env.PORT || 3000;
+const DOWNLOADS_DIR = path.join(os.homedir(), "Downloads");
 
 if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
@@ -27,9 +27,12 @@ app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS_DIR));
 
-// Serve the static index.html file for the root URL
+// Serve static files from the "public" folder
+app.use(express.static(path.join(__dirname, "public")));
+
+// Serve the index.html file for the root URL
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const TRACKERS = [
@@ -54,14 +57,13 @@ app.post("/download", (req, res) => {
     client.add(magnetURI, { path: DOWNLOADS_DIR, announce: TRACKERS }, (torrent) => {
         console.log("Torrent added:", torrent.infoHash);
 
-        let folderName = torrent.name; // Torrent folder or single file name
+        let folderName = torrent.name;
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
             size: file.length,
             downloadLink: `/downloads/${encodeURIComponent(file.name)}`
         }));
 
-        // Emit the torrent info
         io.emit("torrent-added", { folderName, files: filesInfo });
 
         torrent.on("download", () => {
