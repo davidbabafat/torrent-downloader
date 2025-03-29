@@ -39,8 +39,20 @@ app.use("/downloads", express.static(DOWNLOADS_DIR));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Serve the index.html file for the root URL
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+app.get("/download/:filename", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(DOWNLOADS_DIR, filename);
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+    }
+
+    res.download(filePath, filename, (err) => {
+        if (err) {
+            console.error("Download error:", err);
+            res.status(500).json({ error: "Error downloading file" });
+        }
+    });
 });
 
 const TRACKERS = [

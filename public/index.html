@@ -121,48 +121,21 @@
 
         // Listen for "torrent-added" event
         socket.on("torrent-added", (data) => {
-            console.log("Torrent added:", data);  // Debugging line
-            document.getElementById("loader").style.display = "none";
-            const container = document.getElementById("filesContainer");
-            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+    console.log("Torrent added:", data);
+    document.getElementById("loader").style.display = "none";
+    const container = document.getElementById("filesContainer");
+    container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
 
-            const progressContainer = document.createElement("div");
-            progressContainer.classList.add("progress-container");
+    data.files.forEach(file => {
+        const fileLink = document.createElement("a");
+        fileLink.href = `/download/${encodeURIComponent(file.name)}`;
+        fileLink.textContent = `Download ${file.name}`;
+        fileLink.setAttribute("download", file.name); // Trigger download
+        fileLink.style.display = "block";
+        container.appendChild(fileLink);
+    });
+});
 
-            const progressBar = document.createElement("div");
-            progressBar.classList.add("progress-bar");
-            progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
-
-            const progressText = document.createElement("div");
-            progressText.classList.add("progress-text");
-            progressText.id = "progress-text";
-            progressText.innerText = "0%";
-
-            progressContainer.appendChild(progressBar);
-            progressContainer.appendChild(progressText);
-            container.appendChild(progressContainer);
-
-            const message = document.createElement("div");
-            message.classList.add("message");
-            message.id = "download-message";
-            message.innerText = "Download Completed!";
-            container.appendChild(message);
-
-            // Create links for each file after the torrent is added
-            const fileLinks = document.createElement("div");
-            fileLinks.classList.add("file-links");
-
-            data.files.forEach(file => {
-                const fileLink = document.createElement("a");
-                fileLink.href = file.downloadLink;
-                fileLink.textContent = file.name;
-                fileLink.download = file.name;  // Trigger download on click
-                fileLinks.appendChild(fileLink);
-                fileLinks.appendChild(document.createElement("br"));
-            });
-
-            container.appendChild(fileLinks);
-        });
 
         // Listen for progress updates
         socket.on("progress", (data) => {
