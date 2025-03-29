@@ -188,7 +188,7 @@
             document.getElementById("loader").innerHTML = `<div class="loader"></div>`;
             document.getElementById("loader").style.display = "block";
 
-            fetch("https://torrent-downloader-5th2.onrender.com/download", {
+            fetch("https://torrent-downloader-5th2.onrender.com/download/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ magnet: magnetLink }),
