@@ -122,26 +122,31 @@
         const socket = io("http://localhost:3000");
 
         socket.on("torrent-added", (data) => {
+            console.log("Torrent added:", data);
             document.getElementById("loader").style.display = "none"; // Hide loader
             const container = document.getElementById("filesContainer");
             container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
 
-            const progressContainer = document.createElement("div");
-            progressContainer.classList.add("progress-container");
+            // Create progress bars for each file
+            data.files.forEach(file => {
+                const progressContainer = document.createElement("div");
+                progressContainer.classList.add("progress-container");
 
-            const progressBar = document.createElement("div");
-            progressBar.classList.add("progress-bar");
-            progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
+                const progressBar = document.createElement("div");
+                progressBar.classList.add("progress-bar");
+                progressBar.innerHTML = `<div class="progress" id="progress-${file.name}"></div>`;
 
-            const progressText = document.createElement("div");
-            progressText.classList.add("progress-text");
-            progressText.id = "progress-text";
-            progressText.innerText = "0%";
+                const progressText = document.createElement("div");
+                progressText.classList.add("progress-text");
+                progressText.id = `progress-text-${file.name}`;
+                progressText.innerText = "0%";
 
-            progressContainer.appendChild(progressBar);
-            progressContainer.appendChild(progressText);
-            container.appendChild(progressContainer);
+                progressContainer.appendChild(progressBar);
+                progressContainer.appendChild(progressText);
+                container.appendChild(progressContainer);
+            });
 
+            // Optional: Display a message when download is completed
             const message = document.createElement("div");
             message.classList.add("message");
             message.id = "download-message";
@@ -150,9 +155,10 @@
         });
 
         socket.on("progress", (data) => {
+            console.log("Progress data:", data);
             if (data.type === "download") {
-                document.getElementById("progress-bar").style.width = data.progress + "%";
-                document.getElementById("progress-text").innerText = data.progress + "%";
+                document.getElementById(`progress-${data.folderName}`).style.width = data.progress + "%";
+                document.getElementById(`progress-text-${data.folderName}`).innerText = data.progress + "%";
             } else if (data.type === "done") {
                 document.getElementById("download-message").style.display = "block";
             }

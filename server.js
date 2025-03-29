@@ -16,7 +16,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const DOWNLOADS_DIR = path.join(os.homedir(), "Downloads"); // 🔹 Changed to system's Downloads folder
 
 if (!fs.existsSync(DOWNLOADS_DIR)) {
@@ -26,14 +26,6 @@ if (!fs.existsSync(DOWNLOADS_DIR)) {
 app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS_DIR));
-
-// Serve static files from the 'public' folder
-app.use(express.static(path.join(__dirname, "public")));
-
-// Serve the index.html file when the root URL ("/") is accessed
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
 const TRACKERS = [
     "udp://tracker.openbittorrent.com:80",
@@ -64,6 +56,7 @@ app.post("/download", (req, res) => {
             downloadLink: `/downloads/${encodeURIComponent(file.name)}`
         }));
 
+        // Emit the torrent info
         io.emit("torrent-added", { folderName, files: filesInfo });
 
         torrent.on("download", () => {
