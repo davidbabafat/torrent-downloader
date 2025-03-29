@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-   "start": "node -e \"console.log('Current Directory:', __dirname); require('./service.js')\""
+   "start": "node service.js"
 
   },
   "keywords": [],
