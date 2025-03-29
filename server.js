@@ -26,6 +26,11 @@ app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS_DIR));
 
+// Serve the index.html file when the root URL ("/") is accessed
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
+
 const TRACKERS = [
     "udp://tracker.openbittorrent.com:80",
     "udp://tracker.opentrackr.org:1337",
