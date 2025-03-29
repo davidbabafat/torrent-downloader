@@ -15,7 +15,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000; // Use environment variable PORT for deployment
+const PORT = process.env.PORT || 3000;
 const DOWNLOADS_DIR = path.join(__dirname, "torrent-downloads");
 
 if (!fs.existsSync(DOWNLOADS_DIR)) {
@@ -26,9 +26,12 @@ app.use(cors());
 app.use(express.json());
 app.use("/downloads", express.static(DOWNLOADS_DIR));
 
-// Serve the index.html file when the root URL ("/") is accessed
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, "public")));
+
+// Serve the index.html file from the public folder when the root URL ("/") is accessed
 app.get("/", (req, res) => {
-    res.sendFile(path.resolve("index.html")); // Adjusted path
+    res.sendFile(path.join(__dirname, "public", "index.html")); // Reference the file in the public folder
 });
 
 const TRACKERS = [
