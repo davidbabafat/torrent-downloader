@@ -14,7 +14,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-// Use the Render URL for CORS origin
 const frontendUrl = "https://torrent-downloader-5th2.onrender.com"; // Your frontend URL
 const io = new Server(server, {
   cors: {
@@ -24,76 +23,58 @@ const io = new Server(server, {
 });
 
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000; // Use the PORT environment variable in production
-const DOWNLOADS_DIR = path.join(os.homedir(), "Downloads");
-
-if (!fs.existsSync(DOWNLOADS_DIR)) {
-    fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
-}
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use("/downloads", express.static(DOWNLOADS_DIR));
-
-// Serve static files from the "public" folder
 app.use(express.static(path.join(__dirname, "public")));
 
-// Serve the index.html file for the root URL
-app.get("/download/:filename", (req, res) => {
-    const filename = req.params.filename;
-    const filePath = path.join(DOWNLOADS_DIR, filename);
+// ✅ **New Streaming Route**
+app.get("/stream/:torrentId/:fileName", (req, res) => {
+    const { torrentId, fileName } = req.params;
+    console.log(`Streaming file from torrent: ${torrentId}, File: ${fileName}`);
 
-    if (!fs.existsSync(filePath)) {
+    const torrent = client.get(torrentId);
+    if (!torrent) {
+        return res.status(404).json({ error: "Torrent not found" });
+    }
+
+    const file = torrent.files.find(f => f.name === fileName);
+    if (!file) {
         return res.status(404).json({ error: "File not found" });
     }
 
-    res.download(filePath, filename, (err) => {
-        if (err) {
-            console.error("Download error:", err);
-            res.status(500).json({ error: "Error downloading file" });
-        }
-    });
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+    
+    const stream = file.createReadStream();
+    stream.pipe(res);
 });
 
-const TRACKERS = [
-    "udp://tracker.openbittorrent.com:80",
-    "udp://tracker.opentrackr.org:1337",
-    "udp://tracker.coppersurfer.tk:6969",
-    "udp://tracker.leechers-paradise.org:6969",
-    "udp://tracker.internetwarriors.net:1337",
-    "udp://exodus.desync.com:6969",
-    "wss://tracker.openwebtorrent.com",
-    "wss://tracker.btorrent.xyz",
-    "wss://tracker.fastcast.nz",
-    "wss://tracker.webtorrent.dev"
-];
-
+// ✅ **Updated `/download` API**
 app.post("/download", (req, res) => {
     const magnetURI = req.body.magnet;
-    console.log("Received Magnet URI:", magnetURI);  // Debugging line
+    console.log("Received Magnet URI:", magnetURI);
 
     if (!magnetURI) {
         return res.status(400).json({ error: "No magnet link provided" });
     }
 
-    console.log("Adding torrent:", magnetURI);
-
-    // Add the torrent to WebTorrent client
-    client.add(magnetURI, { path: DOWNLOADS_DIR, announce: TRACKERS }, (torrent) => {
+    client.add(magnetURI, (torrent) => {
         console.log("Torrent added:", torrent.infoHash);
 
         let folderName = torrent.name;
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
             size: file.length,
-            downloadLink: `/downloads/${encodeURIComponent(file.name)}`
+            downloadLink: `/stream/${torrent.infoHash}/${encodeURIComponent(file.name)}`
         }));
 
         io.emit("torrent-added", { folderName, files: filesInfo });
 
         torrent.on("download", () => {
             const progress = (torrent.progress * 100).toFixed(2);
-            console.log(`Download progress: ${progress}%`);  // Debugging line
+            console.log(`Download progress: ${progress}%`);
             io.emit("progress", { type: "download", progress, folderName });
         });
 
@@ -111,8 +92,6 @@ app.post("/download", (req, res) => {
     });
 });
 
-
-
 server.listen(PORT, () => {
-    console.log(`Server running at ${frontendUrl}`);
+    console.log(`Server running on port ${PORT}`);
 });
