@@ -13,10 +13,18 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+
+// Use the Render URL for CORS origin
+const frontendUrl = "https://torrent-downloader-5th2.onrender.com"; // Your frontend URL
+const io = new Server(server, {
+  cors: {
+    origin: frontendUrl,
+    methods: ["GET", "POST"],
+  },
+});
 
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Use the PORT environment variable in production
 const DOWNLOADS_DIR = path.join(os.homedir(), "Downloads");
 
 if (!fs.existsSync(DOWNLOADS_DIR)) {
@@ -92,5 +100,5 @@ app.post("/download", (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at ${frontendUrl}`);
 });
