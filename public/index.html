@@ -83,7 +83,6 @@
             color: #28a745;
             display: none;
         }
-        /* 🚀 New Banner Styling */
         .warning-banner {
             position: fixed;
             bottom: 0;
@@ -113,7 +112,6 @@
     <div id="loader" style="display: none;"></div>
     <div id="filesContainer"></div>
 
-    <!-- 🚀 Persistent Warning Banner -->
     <div class="warning-banner">
         ⚠️ Do NOT close or refresh this page! Your download will be lost forever in the void. 🚀
     </div>
@@ -122,31 +120,27 @@
         const socket = io("http://localhost:3000");
 
         socket.on("torrent-added", (data) => {
-            console.log("Torrent added:", data);
-            document.getElementById("loader").style.display = "none"; // Hide loader
+            console.log("Torrent added:", data);  // Debugging line
+            document.getElementById("loader").style.display = "none";
             const container = document.getElementById("filesContainer");
             container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
 
-            // Create progress bars for each file
-            data.files.forEach(file => {
-                const progressContainer = document.createElement("div");
-                progressContainer.classList.add("progress-container");
+            const progressContainer = document.createElement("div");
+            progressContainer.classList.add("progress-container");
 
-                const progressBar = document.createElement("div");
-                progressBar.classList.add("progress-bar");
-                progressBar.innerHTML = `<div class="progress" id="progress-${file.name}"></div>`;
+            const progressBar = document.createElement("div");
+            progressBar.classList.add("progress-bar");
+            progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
 
-                const progressText = document.createElement("div");
-                progressText.classList.add("progress-text");
-                progressText.id = `progress-text-${file.name}`;
-                progressText.innerText = "0%";
+            const progressText = document.createElement("div");
+            progressText.classList.add("progress-text");
+            progressText.id = "progress-text";
+            progressText.innerText = "0%";
 
-                progressContainer.appendChild(progressBar);
-                progressContainer.appendChild(progressText);
-                container.appendChild(progressContainer);
-            });
+            progressContainer.appendChild(progressBar);
+            progressContainer.appendChild(progressText);
+            container.appendChild(progressContainer);
 
-            // Optional: Display a message when download is completed
             const message = document.createElement("div");
             message.classList.add("message");
             message.id = "download-message";
@@ -155,10 +149,10 @@
         });
 
         socket.on("progress", (data) => {
-            console.log("Progress data:", data);
+            console.log("Progress update:", data);  // Debugging line
             if (data.type === "download") {
-                document.getElementById(`progress-${data.folderName}`).style.width = data.progress + "%";
-                document.getElementById(`progress-text-${data.folderName}`).innerText = data.progress + "%";
+                document.getElementById("progress-bar").style.width = data.progress + "%";
+                document.getElementById("progress-text").innerText = data.progress + "%";
             } else if (data.type === "done") {
                 document.getElementById("download-message").style.display = "block";
             }
@@ -166,6 +160,8 @@
 
         function startDownload() {
             const magnetLink = document.getElementById("magnetLink").value;
+            console.log("Submitting Magnet Link:", magnetLink);  // Debugging line
+
             if (!magnetLink) {
                 alert("Please enter a magnet link!");
                 return;
@@ -178,6 +174,13 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ magnet: magnetLink }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Server Response:", data);  // Debugging line
+            })
+            .catch(error => {
+                console.error("Error:", error);
             });
         }
     </script>

@@ -50,10 +50,15 @@ const TRACKERS = [
 
 app.post("/download", (req, res) => {
     const magnetURI = req.body.magnet;
-    if (!magnetURI) return res.status(400).json({ error: "No magnet link provided" });
+    console.log("Received Magnet URI:", magnetURI);  // Debugging line
+
+    if (!magnetURI) {
+        return res.status(400).json({ error: "No magnet link provided" });
+    }
 
     console.log("Adding torrent:", magnetURI);
 
+    // Add the torrent to WebTorrent client
     client.add(magnetURI, { path: DOWNLOADS_DIR, announce: TRACKERS }, (torrent) => {
         console.log("Torrent added:", torrent.infoHash);
 
@@ -68,6 +73,7 @@ app.post("/download", (req, res) => {
 
         torrent.on("download", () => {
             const progress = (torrent.progress * 100).toFixed(2);
+            console.log(`Download progress: ${progress}%`);  // Debugging line
             io.emit("progress", { type: "download", progress, folderName });
         });
 
