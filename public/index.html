@@ -119,7 +119,7 @@
     </div>
 
     <script>
-        const socket = io("http://localhost:3000");
+        const socket = io("https://torrent-downloader-5th2.onrender.com");  // Update to Render URL
 
         socket.on("torrent-added", (data) => {
             document.getElementById("loader").style.display = "none"; // Hide loader
@@ -166,15 +166,10 @@
             }
 
             document.getElementById("loader").innerHTML = `<div class="loader"></div>`;
-            document.getElementById("loader").style.display = "block";
+            document.getElementById("loader").style.display = "inline-block";
 
-            fetch("http://localhost:3000/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ magnet: magnetLink }),
-            });
+            socket.emit("download", { magnet: magnetLink });
         }
     </script>
-
 </body>
 </html>
