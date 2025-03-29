@@ -4,9 +4,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
-import os from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +12,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
-const frontendUrl = "https://torrent-downloader-5th2.onrender.com"; // Your frontend URL
+const frontendUrl = "https://torrent-downloader-5th2.onrender.com";
 const io = new Server(server, {
   cors: {
     origin: frontendUrl,
@@ -29,7 +27,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ **New Streaming Route**
+// ✅ **Streaming Route for Direct Downloads**
 app.get("/stream/:torrentId/:fileName", (req, res) => {
     const { torrentId, fileName } = req.params;
     console.log(`Streaming file from torrent: ${torrentId}, File: ${fileName}`);
@@ -51,7 +49,7 @@ app.get("/stream/:torrentId/:fileName", (req, res) => {
     stream.pipe(res);
 });
 
-// ✅ **Updated `/download` API**
+// ✅ **Download API - Adds Torrent & Sends Streamable Links**
 app.post("/download", (req, res) => {
     const magnetURI = req.body.magnet;
     console.log("Received Magnet URI:", magnetURI);
