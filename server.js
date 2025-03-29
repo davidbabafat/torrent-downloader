@@ -28,7 +28,7 @@ app.use("/downloads", express.static(DOWNLOADS_DIR));
 
 // Serve the index.html file when the root URL ("/") is accessed
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "index.html"));
+    res.sendFile(path.resolve("index.html")); // Adjusted path
 });
 
 const TRACKERS = [
