@@ -37,32 +37,18 @@
         button:hover {
             background-color: #e6b800;
         }
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #ffcc00;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-top: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .progress-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
+        #loader {
+            display: none;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #ffcc00;
         }
         .progress-bar {
-            width: 80%;
+            width: 100%;
             background-color: #333;
             border-radius: 5px;
             overflow: hidden;
-            position: relative;
+            margin-top: 10px;
         }
         .progress {
             height: 10px;
@@ -70,37 +56,21 @@
             width: 0%;
             transition: width 0.5s;
         }
-        .progress-text {
-            margin-left: 10px;
-            font-size: 16px;
-            color: #ffcc00;
-            min-width: 40px;
-            text-align: right;
-        }
-        .message {
+        .file-container {
             margin-top: 10px;
-            font-size: 18px;
-            color: #28a745;
-            display: none;
-        }
-        /* 🚀 New Banner Styling */
-        .warning-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #ffcc00;
-            color: black;
-            text-align: center;
-            font-size: 16px;
             padding: 10px;
-            font-weight: bold;
-            box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.3);
-            animation: fadeIn 1s ease-in-out;
+            border: 1px solid #555;
+            border-radius: 5px;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .download-btn {
+            display: none;
+            margin-top: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -110,51 +80,48 @@
     <input type="text" id="magnetLink" placeholder="Enter Magnet Link">
     <button onclick="startDownload()">Download</button>
 
-    <div id="loader" style="display: none;"></div>
+    <div id="loader">Loading metadata...</div>
     <div id="filesContainer"></div>
 
-    <!-- 🚀 Persistent Warning Banner -->
-    <div class="warning-banner">
-        ⚠️ Do NOT close or refresh this page! Your download will be lost forever in the void. 🚀
-    </div>
-
     <script>
-        const socket = io("https://torrent-downloader-5th2.onrender.com");  // Update to Render URL
+        // Update the socket URL to the Render URL
+        const socket = io("https://torrent-downloader-5th2.onrender.com");
 
-        socket.on("torrent-added", (data) => {
-            document.getElementById("loader").style.display = "none"; // Hide loader
+        socket.on("files", (files) => {
+            document.getElementById("loader").style.display = "none"; // Hide loader once files appear
             const container = document.getElementById("filesContainer");
-            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+            container.innerHTML = "";
 
-            const progressContainer = document.createElement("div");
-            progressContainer.classList.add("progress-container");
+            files.forEach(file => {
+                const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '');
+                const fileDiv = document.createElement("div");
+                fileDiv.classList.add("file-container");
 
-            const progressBar = document.createElement("div");
-            progressBar.classList.add("progress-bar");
-            progressBar.innerHTML = `<div class="progress" id="progress-bar"></div>`;
+                fileDiv.innerHTML = `
+                    <p>${file.name}</p>
+                    <div class="progress-bar">
+                        <div class="progress" id="progress-${safeName}"></div>
+                    </div>
+                    <button id="btn-${safeName}" class="download-btn" onclick="downloadFile('${file.downloadLink}')">
+                        Download
+                    </button>
+                `;
 
-            const progressText = document.createElement("div");
-            progressText.classList.add("progress-text");
-            progressText.id = "progress-text";
-            progressText.innerText = "0%";
-
-            progressContainer.appendChild(progressBar);
-            progressContainer.appendChild(progressText);
-            container.appendChild(progressContainer);
-
-            const message = document.createElement("div");
-            message.classList.add("message");
-            message.id = "download-message";
-            message.innerText = "Download Completed!";
-            container.appendChild(message);
+                container.appendChild(fileDiv);
+            });
         });
 
         socket.on("progress", (data) => {
             if (data.type === "download") {
-                document.getElementById("progress-bar").style.width = data.progress + "%";
-                document.getElementById("progress-text").innerText = data.progress + "%";
+                document.querySelectorAll(".progress").forEach(bar => {
+                    bar.style.width = data.progress + "%";
+                });
             } else if (data.type === "done") {
-                document.getElementById("download-message").style.display = "block";
+                document.querySelectorAll(".download-btn").forEach(btn => {
+                    btn.style.display = "block";
+                });
+            } else if (data.type === "error") {
+                alert("Error: " + data.message);
             }
         });
 
@@ -165,11 +132,19 @@
                 return;
             }
 
-            document.getElementById("loader").innerHTML = `<div class="loader"></div>`;
-            document.getElementById("loader").style.display = "inline-block";
+            document.getElementById("loader").style.display = "block";
 
-            socket.emit("download", { magnet: magnetLink });
+            fetch("https://torrent-downloader-5th2.onrender.com/download", { // Update the URL to Render URL
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ magnet: magnetLink }),
+            });
+        }
+
+        function downloadFile(link) {
+            window.open(link, "_blank");
         }
     </script>
+
 </body>
 </html>

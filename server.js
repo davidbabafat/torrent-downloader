@@ -6,7 +6,6 @@ import cors from "cors";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import os from "os";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,26 +15,15 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000;
-const DOWNLOADS_DIR = process.env.DOWNLOADS_DIR || path.join(os.homedir(), "Downloads");
+const PORT = process.env.PORT || 3000; // Use environment variable PORT for deployment
+const DOWNLOADS_DIR = path.join(__dirname, "torrent-downloads");
 
-// Ensure Downloads folder exists
 if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 }
 
 app.use(cors());
 app.use(express.json());
-
-// 🔹 Serve Static Files (Frontend)
-app.use(express.static(path.join(__dirname, "public")));
-
-// 🔹 Serve the index.html file at the root
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// 🔹 Serve Downloaded Files
 app.use("/downloads", express.static(DOWNLOADS_DIR));
 
 const TRACKERS = [
@@ -60,23 +48,36 @@ app.post("/download", (req, res) => {
     client.add(magnetURI, { path: DOWNLOADS_DIR, announce: TRACKERS }, (torrent) => {
         console.log("Torrent added:", torrent.infoHash);
 
-        let folderName = torrent.name;
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
+            safeName: file.name.replace(/[^a-zA-Z0-9]/g, ''),
             size: file.length,
+            progress: 0,
             downloadLink: `/downloads/${encodeURIComponent(file.name)}`
         }));
 
-        io.emit("torrent-added", { folderName, files: filesInfo });
+        io.emit("files", filesInfo);
 
-        torrent.on("download", () => {
-            const progress = (torrent.progress * 100).toFixed(2);
-            io.emit("progress", { type: "download", progress, folderName });
+        torrent.files.forEach(file => {
+            const filePath = path.join(DOWNLOADS_DIR, file.name);
+            const stream = file.createReadStream();
+            const writeStream = fs.createWriteStream(filePath);
+
+            stream.pipe(writeStream);
+
+            stream.on("data", () => {
+                const progress = (torrent.progress * 100).toFixed(2);
+                io.emit("progress", { type: "download", progress });
+            });
+
+            writeStream.on("finish", () => {
+                console.log(`File saved: ${filePath}`);
+            });
         });
 
         torrent.on("done", () => {
             console.log("All files downloaded!");
-            io.emit("progress", { type: "done", folderName });
+            io.emit("progress", { type: "done" });
         });
 
         torrent.on("error", (err) => {
