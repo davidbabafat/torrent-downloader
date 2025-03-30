@@ -53,6 +53,7 @@ app.post("/download", (req, res) => {
         console.log("Torrent added:", torrent.infoHash);
         let folderName = torrent.name;
 
+        // Initial file list with 0% progress
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
             size: file.length,
@@ -63,28 +64,37 @@ app.post("/download", (req, res) => {
         io.emit("torrent-added", { folderName, files: filesInfo });
 
         // ✅ Emit per-file progress updates
-        torrent.on("download", () => {
-            let updatedFiles = torrent.files.map(file => ({
-                name: file.name,
-                size: file.length,
-                progress: ((file.progress * 100).toFixed(2)), // File-specific progress
-                downloadLink: "#", // Keep disabled until done
-            }));
+        torrent.files.forEach(file => {
+            file.downloaded = 0; // Track file progress manually
 
-            io.emit("progress", { folderName, files: updatedFiles });
+            const updateProgress = setInterval(() => {
+                let progress = ((file.downloaded / file.length) * 100).toFixed(2);
+                let downloadLink = progress >= 100
+                    ? `/downloads/${encodeURIComponent(file.path)}` // Enable link when done
+                    : "#"; // Otherwise, keep disabled
+
+                io.emit("progress", {
+                    folderName,
+                    file: {
+                        name: file.name,
+                        progress,
+                        downloadLink,
+                    },
+                });
+
+                if (progress >= 100) {
+                    clearInterval(updateProgress);
+                }
+            }, 1000);
+
+            file.createReadStream().on("data", chunk => {
+                file.downloaded += chunk.length;
+            });
         });
 
-        // ✅ Once complete, update UI with full links
+        // ✅ Handle completion of the entire torrent
         torrent.on("done", () => {
             console.log("All files downloaded!");
-            let updatedFiles = torrent.files.map(file => ({
-                name: file.name,
-                size: file.length,
-                progress: 100, // Mark as fully downloaded
-                downloadLink: `/downloads/${encodeURIComponent(file.name)}`, // Enable link when done
-            }));
-
-            io.emit("progress", { folderName, files: updatedFiles });
         });
 
         torrent.on("error", (err) => {
