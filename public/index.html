@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Torrent Downloader</title>
     
-    <!-- ✅ Ensure Socket.io loads BEFORE your script -->
+    <!-- ✅ Ensure Socket.io is loaded -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
     <style>
@@ -47,8 +47,8 @@
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
-            display: none; /* Hidden by default */
-            margin-top: 10px;
+            display: none; /* Initially hidden */
+            margin: 10px auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -83,9 +83,9 @@
     <input type="text" id="magnetLink" placeholder="Enter Magnet Link">
     <button onclick="startDownload()">Download</button>
 
-    <div id="loader" class="loader"></div> <!-- Loader -->
+    <div id="loader" class="loader"></div> <!-- Circular Loader -->
 
-    <div id="filesContainer"></div> <!-- Torrent Files List -->
+    <div id="filesContainer"></div> <!-- File List -->
 
     <div class="warning-banner">
         ⚠️ Do NOT close or refresh this page! Your download will be lost forever in the void. 🚀
