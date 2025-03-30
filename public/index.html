@@ -1,155 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torrent Downloader</title>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1e1e2f;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        h1 {
-            color: #ffcc00;
-        }
-        input {
-            width: 80%;
-            padding: 10px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background-color: #ffcc00;
-            color: black;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        button:hover {
-            background-color: #e6b800;
-        }
-        .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #ffcc00;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            display: none;
-            margin: 10px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .file-item {
-            margin: 10px 0;
-            font-size: 16px;
-        }
-        .progress-text {
-            margin-left: 10px;
-            font-size: 16px;
-            color: #ffcc00;
-        }
-        .warning-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #ffcc00;
-            color: black;
-            text-align: center;
-            font-size: 16px;
-            padding: 10px;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
+<script>
+    const socket = io("https://torrent-downloader-5th2.onrender.com");
 
-    <h1>Torrent Downloader</h1>
-    <input type="text" id="magnetLink" placeholder="Enter Magnet Link">
-    <button onclick="startDownload()">Download</button>
-
-    <div id="loader" class="loader"></div>
-    <div id="filesContainer"></div>
-
-    <div class="warning-banner">
-        ⚠️ Do NOT close or refresh this page! Your download will be lost forever in the void. 🚀
-    </div>
-
-    <script>
-        const socket = io("https://torrent-downloader-5th2.onrender.com");
-
-        function startDownload() {
-            const magnetLink = document.getElementById("magnetLink").value;
-            if (!magnetLink) {
-                alert("Please enter a magnet link!");
-                return;
-            }
-
-            document.getElementById("loader").style.display = "block";
-
-            fetch("https://torrent-downloader-5th2.onrender.com/download", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ magnet: magnetLink }),
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                console.log("Server Response:", data);
-            })
-            .catch(error => {
-                console.error("Download failed:", error.message);
-                alert("Download failed! Please check server logs.");
-                document.getElementById("loader").style.display = "none";
-            });
+    function startDownload() {
+        const magnetLink = document.getElementById("magnetLink").value;
+        if (!magnetLink) {
+            alert("Please enter a magnet link!");
+            return;
         }
 
-        socket.on("torrent-added", (data) => {
-            console.log("Torrent added:", data);
-            document.getElementById("loader").style.display = "none";
-            const container = document.getElementById("filesContainer");
-            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+        document.getElementById("loader").style.display = "block";  // Show loader
 
-            data.files.forEach(file => {
-                const fileItem = document.createElement("div");
-                fileItem.classList.add("file-item");
-                fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
-                fileItem.dataset.filename = file.name;
-                container.appendChild(fileItem);
-            });
+        fetch("https://torrent-downloader-5th2.onrender.com/download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ magnet: magnetLink }),
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            console.log("Server Response:", data);
+        })
+        .catch(error => {
+            console.error("Download failed:", error.message);
+            alert("Download failed! Please check server logs.");
+            document.getElementById("loader").style.display = "none"; // Hide loader on error
         });
+    }
 
-        socket.on("progress", (data) => {
-            if (!data || !data.files) return;
+    socket.on("torrent-added", (data) => {
+        console.log("Torrent added:", data);
+        document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent is added
 
-            data.files.forEach(fileData => {
-                const fileItem = [...document.querySelectorAll(".file-item")].find(
-                    item => item.dataset.filename === fileData.name
-                );
+        const container = document.getElementById("filesContainer");
+        container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
 
-                if (fileItem) {
-                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
-                    if (fileData.progress >= 100) {
-                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
-                    }
+        data.files.forEach(file => {
+            const fileItem = document.createElement("div");
+            fileItem.classList.add("file-item");
+            fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
+            fileItem.dataset.filename = file.name;
+            container.appendChild(fileItem);
+        });
+    });
+
+    socket.on("progress", (data) => {
+        if (!data || !data.files) return;
+
+        data.files.forEach(fileData => {
+            const fileItem = [...document.querySelectorAll(".file-item")].find(
+                item => item.dataset.filename === fileData.name
+            );
+
+            if (fileItem) {
+                fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
+                if (fileData.progress >= 100) {
+                    fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
                 }
-            });
+            }
         });
-    </script>
-
-</body>
-</html>
+    });
+</script>
