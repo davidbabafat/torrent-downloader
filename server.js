@@ -15,7 +15,7 @@ const server = http.createServer(app);
 const client = new WebTorrent();
 const PORT = process.env.PORT || 10000;
 
-const frontendUrl = "https://torrent-downloader-5th2.onrender.com"; // Update if needed
+const frontendUrl = "https://torrent-downloader-5th2.onrender.com";
 const io = new Server(server, {
     cors: { origin: frontendUrl, methods: ["GET", "POST"] },
 });
@@ -47,8 +47,8 @@ app.post("/download", (req, res) => {
             let folderName = torrent.name;
 
             let filesInfo = torrent.files.map(file => ({
-                name: file.name,
-                size: file.length,
+                name: file.name || "Unknown File",
+                size: file.length || 0,
                 progress: 0,
                 downloadLink: "#",
             }));
@@ -58,9 +58,10 @@ app.post("/download", (req, res) => {
             // ✅ Track Progress
             torrent.on("download", () => {
                 let progress = (torrent.progress * 100).toFixed(2);
+                
                 let filesStatus = torrent.files.map(file => ({
-                    name: file.name,
-                    progress: (file.downloaded / file.length * 100).toFixed(2),
+                    name: file.name || "Unknown File",
+                    progress: file.length ? ((file.downloaded || 0) / file.length * 100).toFixed(2) : "0",
                     downloadLink: file.downloaded >= file.length
                         ? `/downloads/${encodeURIComponent(file.path)}`
                         : "#",

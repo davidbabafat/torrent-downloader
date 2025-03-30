@@ -44,8 +44,8 @@
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-top: 10px;
+            display: none;
+            margin: 10px auto;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -80,9 +80,7 @@
     <input type="text" id="magnetLink" placeholder="Enter Magnet Link">
     <button onclick="startDownload()">Download</button>
 
-    <div id="loader" style="display: none;">
-        <div class="loader"></div>
-    </div>
+    <div id="loader" class="loader"></div>
     <div id="filesContainer"></div>
 
     <div class="warning-banner">
@@ -110,7 +108,9 @@
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 return response.json();
             })
-            .then(data => console.log("Server Response:", data))
+            .then(data => {
+                console.log("Server Response:", data);
+            })
             .catch(error => {
                 console.error("Download failed:", error.message);
                 alert("Download failed! Please check server logs.");
@@ -134,16 +134,20 @@
         });
 
         socket.on("progress", (data) => {
-            const fileItem = [...document.querySelectorAll(".file-item")].find(
-                item => item.dataset.filename === data.file.name
-            );
+            if (!data || !data.files) return;
 
-            if (fileItem) {
-                fileItem.querySelector(".progress-text").textContent = `${data.file.progress}%`;
-                if (data.file.progress >= 100) {
-                    fileItem.innerHTML += ` - <a href="${data.file.downloadLink}" download>Download</a>`;
+            data.files.forEach(fileData => {
+                const fileItem = [...document.querySelectorAll(".file-item")].find(
+                    item => item.dataset.filename === fileData.name
+                );
+
+                if (fileItem) {
+                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
+                    if (fileData.progress >= 100) {
+                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
+                    }
                 }
-            }
+            });
         });
     </script>
 
