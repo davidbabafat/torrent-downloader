@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const client = new WebTorrent();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 const frontendUrl = "https://torrent-downloader-5th2.onrender.com"; // Update if needed
 const io = new Server(server, {
@@ -25,7 +25,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ Ensure the "downloads" directory exists
+// Ensure the "downloads" directory exists
 const DOWNLOADS_DIR = path.join(__dirname, "downloads");
 if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR);
@@ -55,22 +55,18 @@ app.post("/download", (req, res) => {
 
             io.emit("torrent-added", { folderName, files: filesInfo });
 
-            // ✅ Track Progress Per File
-            torrent.files.forEach(file => {
-                file.downloaded = 0;
-
-                const updateProgress = setInterval(() => {
-                    let progress = ((file.downloaded / file.length) * 100).toFixed(2);
-                    let downloadLink = progress >= 100
+            // ✅ Track Progress
+            torrent.on("download", () => {
+                let progress = (torrent.progress * 100).toFixed(2);
+                let filesStatus = torrent.files.map(file => ({
+                    name: file.name,
+                    progress: (file.downloaded / file.length * 100).toFixed(2),
+                    downloadLink: file.downloaded >= file.length
                         ? `/downloads/${encodeURIComponent(file.path)}`
-                        : "#";
+                        : "#",
+                }));
 
-                    io.emit("progress", { folderName, file: { name: file.name, progress, downloadLink } });
-
-                    if (progress >= 100) clearInterval(updateProgress);
-                }, 1000);
-
-                file.createReadStream().on("data", chunk => { file.downloaded += chunk.length; });
+                io.emit("progress", { folderName, progress, files: filesStatus });
             });
 
             torrent.on("done", () => console.log("All files downloaded!"));
