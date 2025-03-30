@@ -25,12 +25,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Ensure the "downloads" directory exists
-const DOWNLOADS_DIR = path.join(__dirname, "downloads");
-if (!fs.existsSync(DOWNLOADS_DIR)) {
-    fs.mkdirSync(DOWNLOADS_DIR);
-}
-
 // ✅ Root Route
 app.get("/", (req, res) => res.send("Torrent Downloader Server is Running!"));
 
@@ -42,15 +36,15 @@ app.post("/download", (req, res) => {
     if (!magnetURI) return res.status(400).json({ error: "No magnet link provided" });
 
     try {
-        client.add(magnetURI, { path: DOWNLOADS_DIR }, (torrent) => {
+        client.add(magnetURI, (torrent) => {
             console.log("Torrent added:", torrent.name);
             let folderName = torrent.name;
 
-            let filesInfo = torrent.files.map(file => ({
+            let filesInfo = torrent.files.map((file, index) => ({
                 name: file.name || "Unknown File",
                 size: file.length || 0,
                 progress: 0,
-                downloadLink: "#",
+                downloadLink: "#", // Default until 100%
             }));
 
             io.emit("torrent-added", { folderName, files: filesInfo });
@@ -58,13 +52,12 @@ app.post("/download", (req, res) => {
             // ✅ Track Progress
             torrent.on("download", () => {
                 let progress = (torrent.progress * 100).toFixed(2);
-                const FILES_BASE_URL = "https://torrent-downloader-zjp4.onrender.com/downloads/";
-
-                let filesStatus = torrent.files.map(file => ({
+                
+                let filesStatus = torrent.files.map((file, index) => ({
                     name: file.name || "Unknown File",
                     progress: file.length ? ((file.downloaded || 0) / file.length * 100).toFixed(2) : "0",
                     downloadLink: file.downloaded >= file.length
-                        ? `${FILES_BASE_URL}${encodeURIComponent(file.path)}`
+                        ? `/stream/${torrent.infoHash}/${index}` // ✅ FIXED STREAMING LINK
                         : "#",
                 }));
 
@@ -82,7 +75,25 @@ app.post("/download", (req, res) => {
     }
 });
 
-// ✅ Serve Downloaded Files
-app.use("/downloads", express.static(DOWNLOADS_DIR));
+// ✅ STREAMING ENDPOINT (This Fixes Download Issue)
+app.get("/stream/:infoHash/:fileIndex", (req, res) => {
+    const { infoHash, fileIndex } = req.params;
+    const torrent = client.get(infoHash);
+
+    if (!torrent) {
+        return res.status(404).send("Torrent not found");
+    }
+
+    const file = torrent.files[parseInt(fileIndex)];
+    if (!file) {
+        return res.status(404).send("File not found");
+    }
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+
+    const stream = file.createReadStream();
+    stream.pipe(res);
+});
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
