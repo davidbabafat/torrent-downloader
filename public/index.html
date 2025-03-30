@@ -122,7 +122,7 @@
 
         socket.on("torrent-added", (data) => {
             console.log("Torrent added:", data);
-            document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent added
+            document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent is added
 
             const container = document.getElementById("filesContainer");
             container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
@@ -130,8 +130,8 @@
             data.files.forEach(file => {
                 const fileItem = document.createElement("div");
                 fileItem.classList.add("file-item");
-                fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
                 fileItem.dataset.filename = file.name;
+                fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
                 container.appendChild(fileItem);
             });
         });
@@ -140,14 +140,19 @@
             if (!data || !data.files) return;
 
             data.files.forEach(fileData => {
-                const fileItem = [...document.querySelectorAll(".file-item")].find(
-                    item => item.dataset.filename === fileData.name
-                );
-
+                let fileItem = document.querySelector(`[data-filename="${fileData.name}"]`);
                 if (fileItem) {
-                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
-                    if (fileData.progress >= 100) {
-                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
+                    let progressText = fileItem.querySelector(".progress-text");
+                    progressText.textContent = `${fileData.progress}%`;
+
+                    // ✅ Add a single download link only when progress reaches 100%
+                    if (fileData.progress >= 100 && !fileItem.querySelector("a")) {
+                        let link = document.createElement("a");
+                        link.href = fileData.downloadLink;
+                        link.textContent = " Download";
+                        link.setAttribute("download", fileData.name);
+                        link.style.color = "yellow";
+                        fileItem.appendChild(link);
                     }
                 }
             });
