@@ -53,7 +53,6 @@ app.post("/download", (req, res) => {
         console.log("Torrent added:", torrent.infoHash);
         let folderName = torrent.name;
 
-        // Initial file list with 0% progress
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
             size: file.length,
@@ -68,10 +67,8 @@ app.post("/download", (req, res) => {
             let updatedFiles = torrent.files.map(file => ({
                 name: file.name,
                 size: file.length,
-                progress: ((file.downloaded / file.length) * 100).toFixed(2), // File-specific progress
-                downloadLink: file.downloaded === file.length 
-                    ? `/downloads/${encodeURIComponent(file.path)}` // Enable link when done
-                    : "#", // Otherwise, keep disabled
+                progress: ((file.progress * 100).toFixed(2)), // File-specific progress
+                downloadLink: "#", // Keep disabled until done
             }));
 
             io.emit("progress", { folderName, files: updatedFiles });
@@ -84,7 +81,7 @@ app.post("/download", (req, res) => {
                 name: file.name,
                 size: file.length,
                 progress: 100, // Mark as fully downloaded
-                downloadLink: `/downloads/${encodeURIComponent(file.path)}`, // Enable link when done
+                downloadLink: `/downloads/${encodeURIComponent(file.name)}`, // Enable link when done
             }));
 
             io.emit("progress", { folderName, files: updatedFiles });
