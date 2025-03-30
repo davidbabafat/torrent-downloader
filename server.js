@@ -44,7 +44,7 @@ app.post("/download", (req, res) => {
                 name: file.name || "Unknown File",
                 size: file.length || 0,
                 progress: 0,
-                downloadLink: "#", // Default until 100%
+                downloadLink: "#", // Default placeholder
             }));
 
             io.emit("torrent-added", { folderName, files: filesInfo });
@@ -52,12 +52,12 @@ app.post("/download", (req, res) => {
             // ✅ Track Progress
             torrent.on("download", () => {
                 let progress = (torrent.progress * 100).toFixed(2);
-                
+
                 let filesStatus = torrent.files.map((file, index) => ({
                     name: file.name || "Unknown File",
                     progress: file.length ? ((file.downloaded || 0) / file.length * 100).toFixed(2) : "0",
                     downloadLink: file.downloaded >= file.length
-                        ? `/stream/${torrent.infoHash}/${index}` // ✅ FIXED STREAMING LINK
+                        ? `https://torrent-downloader-zjp4.onrender.com/stream/${torrent.infoHash}/${index}` // ✅ FIXED STREAMING LINK
                         : "#",
                 }));
 
@@ -75,7 +75,7 @@ app.post("/download", (req, res) => {
     }
 });
 
-// ✅ STREAMING ENDPOINT (This Fixes Download Issue)
+// ✅ STREAMING ENDPOINT
 app.get("/stream/:infoHash/:fileIndex", (req, res) => {
     const { infoHash, fileIndex } = req.params;
     const torrent = client.get(infoHash);

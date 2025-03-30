@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Torrent Downloader</title>
     
-    <!-- ✅ Ensure Socket.io is loaded -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 
     <style>
@@ -47,7 +46,7 @@
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
-            display: none; /* Initially hidden */
+            display: none;
             margin: 10px auto;
         }
         @keyframes spin {
@@ -83,9 +82,9 @@
     <input type="text" id="magnetLink" placeholder="Enter Magnet Link">
     <button onclick="startDownload()">Download</button>
 
-    <div id="loader" class="loader"></div> <!-- Circular Loader -->
+    <div id="loader" class="loader"></div>
 
-    <div id="filesContainer"></div> <!-- File List -->
+    <div id="filesContainer"></div>
 
     <div class="warning-banner">
         ⚠️ Do NOT close or refresh this page! Your download will be lost forever in the void. 🚀
@@ -101,28 +100,21 @@
                 return;
             }
 
-            document.getElementById("loader").style.display = "inline-block";  // ✅ Show loader
+            document.getElementById("loader").style.display = "inline-block";
 
             fetch("https://torrent-downloader-zjp4.onrender.com/download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ magnet: magnetLink }),
             })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => console.log("Server Response:", data))
             .catch(error => {
-                console.error("Download failed:", error.message);
                 alert("Download failed! Please check server logs.");
-                document.getElementById("loader").style.display = "none"; // ✅ Hide loader on failure
+                document.getElementById("loader").style.display = "none";
             });
         }
 
         socket.on("torrent-added", (data) => {
-            console.log("Torrent added:", data);
-            document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent is added
+            document.getElementById("loader").style.display = "none";  
 
             const container = document.getElementById("filesContainer");
             container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
@@ -130,44 +122,26 @@
             data.files.forEach(file => {
                 const fileItem = document.createElement("div");
                 fileItem.classList.add("file-item");
-                fileItem.dataset.filename = file.name;
                 fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
+                fileItem.dataset.filename = file.name;
                 container.appendChild(fileItem);
             });
         });
 
         socket.on("progress", (data) => {
-    console.log("Received progress update:", data); // ✅ Debugging log
+            data.files.forEach(fileData => {
+                const fileItem = [...document.querySelectorAll(".file-item")].find(
+                    item => item.dataset.filename === fileData.name
+                );
 
-    if (!data || !data.files) return;
-
-    data.files.forEach(fileData => {
-        let fileItem = document.querySelector(`[data-filename="${fileData.name}"]`);
-        if (fileItem) {
-            let progressText = fileItem.querySelector(".progress-text");
-            progressText.textContent = `${fileData.progress}%`;
-
-            // ✅ Debugging log: Check if the backend is sending a proper download link
-            console.log(`File: ${fileData.name}, Progress: ${fileData.progress}%, Download Link: ${fileData.downloadLink}`);
-
-            // ✅ Add a single download link only when progress reaches 100%
-            if (fileData.progress >= 100 && !fileItem.querySelector("a")) {
-                if (!fileData.downloadLink) {
-                    console.error(`Download link missing for ${fileData.name}`);
-                    return;
+                if (fileItem) {
+                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
+                    if (fileData.progress >= 100) {
+                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
+                    }
                 }
-
-                let link = document.createElement("a");
-                link.href = fileData.downloadLink;
-                link.textContent = " Download";
-                link.setAttribute("download", fileData.name);
-                link.style.color = "yellow";
-                fileItem.appendChild(link);
-            }
-        }
-    });
-});
-
+            });
+        });
     </script>
 
 </body>
