@@ -84,16 +84,24 @@ app.get("/stream/:infoHash/:fileIndex", (req, res) => {
         return res.status(404).send("Torrent not found");
     }
 
-    const file = torrent.files[parseInt(fileIndex)];
+    const file = torrent.files[fileIndex];
+
     if (!file) {
         return res.status(404).send("File not found");
     }
 
-    res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
+    res.setHeader("Content-Type", "application/octet-stream");
 
     const stream = file.createReadStream();
+
+    stream.on("error", (err) => {
+        console.error("Stream error:", err.message);
+        res.status(500).send("Error streaming file");
+    });
+
     stream.pipe(res);
 });
+
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -129,17 +129,19 @@
         });
 
         socket.on("progress", (data) => {
-            data.files.forEach(fileData => {
-                const fileItem = [...document.querySelectorAll(".file-item")].find(
-                    item => item.dataset.filename === fileData.name
-                );
+            const container = document.getElementById("filesContainer");
+            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;  // ✅ Prevents flooding
 
-                if (fileItem) {
-                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
-                    if (fileData.progress >= 100) {
-                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
-                    }
+            data.files.forEach(fileData => {
+                const fileItem = document.createElement("div");
+                fileItem.classList.add("file-item");
+                fileItem.innerHTML = `${fileData.name} - <span class="progress-text">${fileData.progress}%</span>`;
+                
+                if (fileData.progress >= 100) {
+                    fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
                 }
+
+                container.appendChild(fileItem);
             });
         });
     </script>
