@@ -1,64 +1,70 @@
-<script>
-    const socket = io("https://torrent-downloader-5th2.onrender.com");
+<head>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>  <!-- ✅ Moved this UP -->
+</head>
 
-    function startDownload() {
-        const magnetLink = document.getElementById("magnetLink").value;
-        if (!magnetLink) {
-            alert("Please enter a magnet link!");
-            return;
+<body>
+    <script>
+        const socket = io("https://torrent-downloader-5th2.onrender.com");  // ✅ Now it works
+
+        function startDownload() {
+            const magnetLink = document.getElementById("magnetLink").value;
+            if (!magnetLink) {
+                alert("Please enter a magnet link!");
+                return;
+            }
+
+            document.getElementById("loader").style.display = "block";  // Show loader
+
+            fetch("https://torrent-downloader-5th2.onrender.com/download", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ magnet: magnetLink }),
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Server Response:", data);
+            })
+            .catch(error => {
+                console.error("Download failed:", error.message);
+                alert("Download failed! Please check server logs.");
+                document.getElementById("loader").style.display = "none"; // Hide loader on error
+            });
         }
 
-        document.getElementById("loader").style.display = "block";  // Show loader
+        socket.on("torrent-added", (data) => {
+            console.log("Torrent added:", data);
+            document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent is added
 
-        fetch("https://torrent-downloader-5th2.onrender.com/download", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ magnet: magnetLink }),
-        })
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            console.log("Server Response:", data);
-        })
-        .catch(error => {
-            console.error("Download failed:", error.message);
-            alert("Download failed! Please check server logs.");
-            document.getElementById("loader").style.display = "none"; // Hide loader on error
+            const container = document.getElementById("filesContainer");
+            container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+
+            data.files.forEach(file => {
+                const fileItem = document.createElement("div");
+                fileItem.classList.add("file-item");
+                fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
+                fileItem.dataset.filename = file.name;
+                container.appendChild(fileItem);
+            });
         });
-    }
 
-    socket.on("torrent-added", (data) => {
-        console.log("Torrent added:", data);
-        document.getElementById("loader").style.display = "none";  // ✅ Hide loader after torrent is added
+        socket.on("progress", (data) => {
+            if (!data || !data.files) return;
 
-        const container = document.getElementById("filesContainer");
-        container.innerHTML = `<h3>Downloading: ${data.folderName}</h3>`;
+            data.files.forEach(fileData => {
+                const fileItem = [...document.querySelectorAll(".file-item")].find(
+                    item => item.dataset.filename === fileData.name
+                );
 
-        data.files.forEach(file => {
-            const fileItem = document.createElement("div");
-            fileItem.classList.add("file-item");
-            fileItem.innerHTML = `${file.name} - <span class="progress-text">0%</span>`;
-            fileItem.dataset.filename = file.name;
-            container.appendChild(fileItem);
-        });
-    });
-
-    socket.on("progress", (data) => {
-        if (!data || !data.files) return;
-
-        data.files.forEach(fileData => {
-            const fileItem = [...document.querySelectorAll(".file-item")].find(
-                item => item.dataset.filename === fileData.name
-            );
-
-            if (fileItem) {
-                fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
-                if (fileData.progress >= 100) {
-                    fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
+                if (fileItem) {
+                    fileItem.querySelector(".progress-text").textContent = `${fileData.progress}%`;
+                    if (fileData.progress >= 100) {
+                        fileItem.innerHTML += ` - <a href="${fileData.downloadLink}" download>Download</a>`;
+                    }
                 }
-            }
+            });
         });
-    });
-</script>
+    </script>
+</body>
