@@ -64,26 +64,30 @@ app.post("/download", (req, res) => {
         io.emit("torrent-added", { folderName, files: filesInfo });
 
         // ✅ Emit per-file progress updates
-        const updateFileProgress = () => {
+        torrent.on("download", () => {
             let updatedFiles = torrent.files.map(file => ({
                 name: file.name,
                 size: file.length,
                 progress: ((file.downloaded / file.length) * 100).toFixed(2), // File-specific progress
                 downloadLink: file.downloaded === file.length 
-                    ? `/downloads/${encodeURIComponent(file.name)}` // Enable link when done
+                    ? `/downloads/${encodeURIComponent(file.path)}` // Enable link when done
                     : "#", // Otherwise, keep disabled
             }));
 
             io.emit("progress", { folderName, files: updatedFiles });
-        };
-
-        torrent.on("download", updateFileProgress);
+        });
 
         // ✅ Once complete, update UI with full links
         torrent.on("done", () => {
             console.log("All files downloaded!");
-            updateFileProgress();
-            io.emit("progress", { type: "done", folderName });
+            let updatedFiles = torrent.files.map(file => ({
+                name: file.name,
+                size: file.length,
+                progress: 100, // Mark as fully downloaded
+                downloadLink: `/downloads/${encodeURIComponent(file.path)}`, // Enable link when done
+            }));
+
+            io.emit("progress", { folderName, files: updatedFiles });
         });
 
         torrent.on("error", (err) => {
