@@ -40,29 +40,7 @@ app.get("/", (req, res) => {
     res.send("Torrent Downloader Server is Running!");
 });
 
-// ✅ **Streaming Route for Direct Downloads**
-app.get("/stream/:torrentId/:fileName", (req, res) => {
-    const { torrentId, fileName } = req.params;
-    console.log(`Streaming file from torrent: ${torrentId}, File: ${fileName}`);
-
-    const torrent = client.get(torrentId);
-    if (!torrent) {
-        return res.status(404).json({ error: "Torrent not found" });
-    }
-
-    const file = torrent.files.find(f => f.name === fileName);
-    if (!file) {
-        return res.status(404).json({ error: "File not found" });
-    }
-
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${file.name}"`);
-    
-    const stream = file.createReadStream();
-    stream.pipe(res);
-});
-
-// ✅ **Download API - Adds Torrent & Saves Files**
+// ✅ **Download API - Adds Torrent & Tracks Progress**
 app.post("/download", (req, res) => {
     const magnetURI = req.body.magnet;
     console.log("Received Magnet URI:", magnetURI);
@@ -73,26 +51,38 @@ app.post("/download", (req, res) => {
 
     client.add(magnetURI, { path: DOWNLOADS_DIR }, (torrent) => {
         console.log("Torrent added:", torrent.infoHash);
-
         let folderName = torrent.name;
+
+        // Initial file list with 0% progress
         let filesInfo = torrent.files.map(file => ({
             name: file.name,
             size: file.length,
-            downloadLink: `/downloads/${encodeURIComponent(file.name)}`,
+            progress: 0, // Start with 0%
+            downloadLink: "#", // Initially disabled
         }));
 
         io.emit("torrent-added", { folderName, files: filesInfo });
 
-        // ✅ Emit progress updates
-        torrent.on("download", () => {
-            const progress = (torrent.progress * 100).toFixed(2);
-            console.log(`Download progress: ${progress}%`);
-            io.emit("progress", { type: "download", progress, folderName });
-        });
+        // ✅ Emit per-file progress updates
+        const updateFileProgress = () => {
+            let updatedFiles = torrent.files.map(file => ({
+                name: file.name,
+                size: file.length,
+                progress: ((file.downloaded / file.length) * 100).toFixed(2), // File-specific progress
+                downloadLink: file.downloaded === file.length 
+                    ? `/downloads/${encodeURIComponent(file.name)}` // Enable link when done
+                    : "#", // Otherwise, keep disabled
+            }));
 
-        // ✅ Once complete, files will be available for direct download
+            io.emit("progress", { folderName, files: updatedFiles });
+        };
+
+        torrent.on("download", updateFileProgress);
+
+        // ✅ Once complete, update UI with full links
         torrent.on("done", () => {
             console.log("All files downloaded!");
+            updateFileProgress();
             io.emit("progress", { type: "done", folderName });
         });
 
@@ -101,7 +91,7 @@ app.post("/download", (req, res) => {
             io.emit("progress", { type: "error", message: err.message });
         });
 
-        res.json({ success: true, files: filesInfo });
+        res.json({ success: true });
     });
 });
 
