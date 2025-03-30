@@ -58,12 +58,13 @@ app.post("/download", (req, res) => {
             // ✅ Track Progress
             torrent.on("download", () => {
                 let progress = (torrent.progress * 100).toFixed(2);
-                
+                const FILES_BASE_URL = "https://torrent-downloader-zjp4.onrender.com/downloads/";
+
                 let filesStatus = torrent.files.map(file => ({
                     name: file.name || "Unknown File",
                     progress: file.length ? ((file.downloaded || 0) / file.length * 100).toFixed(2) : "0",
                     downloadLink: file.downloaded >= file.length
-                        ? `/downloads/${encodeURIComponent(file.path)}`
+                        ? `${FILES_BASE_URL}${encodeURIComponent(file.path)}`
                         : "#",
                 }));
 
