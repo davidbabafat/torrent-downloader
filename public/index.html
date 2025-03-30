@@ -92,7 +92,7 @@
     </div>
 
     <script>
-        const socket = io("https://torrent-downloader-5th2.onrender.com"); 
+        const socket = io("https://torrent-downloader-zjp4.onrender.com"); 
 
         function startDownload() {
             const magnetLink = document.getElementById("magnetLink").value;
@@ -103,7 +103,7 @@
 
             document.getElementById("loader").style.display = "inline-block";  // ✅ Show loader
 
-            fetch("https://torrent-downloader-5th2.onrender.com/download", {
+            fetch("https://torrent-downloader-zjp4.onrender.com/download", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ magnet: magnetLink }),

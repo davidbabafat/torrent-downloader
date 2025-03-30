@@ -15,7 +15,7 @@ const server = http.createServer(app);
 const client = new WebTorrent();
 const PORT = process.env.PORT || 10000;
 
-const frontendUrl = "https://torrent-downloader-5th2.onrender.com";
+const frontendUrl = "https://torrent-downloader-zjp4.onrender.com";
 const io = new Server(server, {
     cors: { origin: frontendUrl, methods: ["GET", "POST"] },
 });
